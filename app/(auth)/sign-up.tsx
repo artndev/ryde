@@ -2,6 +2,7 @@ import Button from '@/components/Button'
 import Input from '@/components/Input'
 import OAuth from '@/components/OAuth'
 import { icons, images } from '@/constants'
+import { fetchAPI } from '@/lib/fetch'
 import { useSignUp } from '@clerk/clerk-expo'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, useRouter } from 'expo-router'
@@ -32,6 +33,10 @@ const SignUp = () => {
     state: 'default',
     error: '',
     code: '',
+    data: {
+      username: '',
+      email: '',
+    },
   })
   const [showSuccessModal, setShowSuccessModal] = useState(false)
 
@@ -48,6 +53,7 @@ const SignUp = () => {
       await signUp.create({
         emailAddress: data.email,
         password: data.password,
+        username: data.username,
       })
 
       await signUp.prepareEmailAddressVerification({ strategy: 'email_code' })
@@ -55,6 +61,10 @@ const SignUp = () => {
       setVerification({
         ...verification,
         state: 'pending',
+        data: {
+          username: data.username,
+          email: data.email,
+        },
       })
     } catch (err: any) {
       Alert.alert('Error', err.errors[0].longMessage)
@@ -80,7 +90,14 @@ const SignUp = () => {
         return
       }
 
-      // TODO: Create a db user
+      await fetchAPI('/(api)/user', {
+        method: 'POST',
+        body: JSON.stringify({
+          username: verification.data.username,
+          email: verification.data.email,
+          clerkId: signUpAttempt.createdUserId,
+        }),
+      })
 
       await setActive({ session: signUpAttempt.createdSessionId })
 
